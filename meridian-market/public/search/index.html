@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .search-hero { padding-block: 3rem 2rem; max-width: 760px; }
+    .big-search { display: flex; gap: .5rem; margin-top: 1.25rem; }
+    .big-search .input { font-size: 1.15rem; padding: .95rem 1.1rem; border-radius: var(--r); }
+    .big-search .btn { padding-inline: 1.6rem; border-radius: var(--r); }
+    .suggest { margin-top: 1.25rem; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .results-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .results-bar .select { width: auto; padding: .5rem .75rem; }
+    mark { background: var(--marigold-soft); color: inherit; border-radius: 3px; padding: 0 2px; }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <section class="search-hero">
+    <h1>Find something specific</h1>
+    <form class="big-search" id="search-form" role="search">
+      <label class="sr-only" for="q">Search products</label>
+      <input class="input" id="q" type="search" placeholder="Try “coffee”, “wool” or “speaker”" autocomplete="off" autofocus>
+      <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+    <div class="suggest"><span class="muted small">People often search for</span>
+      <div class="chip-row" id="suggest">
+        <button class="chip">headphones</button><button class="chip">kitchen</button><button class="chip">candle</button><button class="chip">outdoors</button><button class="chip">gift</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" aria-live="polite">
+    <div class="results-bar" id="results-bar" hidden>
+      <h2 style="font-size:1.4rem" id="results-title"></h2>
+      <label class="flex small" style="gap:.5rem">Sort by
+        <select class="select" id="sort">
+          <option value="">Best match</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="rating">Highest rated</option>
+        </select>
+      </label>
+    </div>
+    <div class="product-grid" id="grid"></div>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(() => {
+  const { $, api, esc, renderProducts, skeletonCards } = M;
+  let timer, last = '';
+
+  async function run(q) {
+    q = q.trim();
+    history.replaceState(null, '', '/search/' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    if (q.length < 2) { $('#results-bar').hidden = true; $('#grid').innerHTML = ''; return; }
+    last = q;
+    $('#results-bar').hidden = false;
+    $('#results-title').textContent = 'Searching…';
+    $('#grid').innerHTML = skeletonCards(4);
+    try {
+      const sort = $('#sort').value;
+      const { products } = await api('/api/products/search?q=' + encodeURIComponent(q) + (sort ? '&sort=' + sort : ''));
+      if (q !== last) return; // a newer search started
+      $('#results-title').textContent = products.length + ' result' + (products.length === 1 ? '' : 's') + ' for “' + q + '”';
+      renderProducts($('#grid'), products,
+        '<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div><h3>Nothing matches “' + esc(q) + '”</h3><p>Check the spelling, try a shorter word, or browse by aisle instead.</p><a class="btn btn-primary" href="/products/">Browse all products</a></div>');
+      // highlight the matched text in product names
+      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+      $('#grid').querySelectorAll('.product-name a').forEach(a => (a.innerHTML = a.textContent.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(re, '<mark>$1</mark>')));
+    } catch (e) {
+      $('#results-title').textContent = 'Search failed';
+      $('#grid').innerHTML = '<p class="muted">' + esc(e.message) + '</p>';
+    }
+  }
+
+  $('#q').addEventListener('input', e => { clearTimeout(timer); timer = setTimeout(() => run(e.target.value), 300); });
+  $('#search-form').addEventListener('submit', e => { e.preventDefault(); run($('#q').value); });
+  $('#sort').addEventListener('change', () => run($('#q').value));
+  $('#suggest').addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    $('#q').value = c.textContent; run(c.textContent);
+  });
+
+  const initial = M.params().get('q');
+  if (initial) { $('#q').value = initial; run(initial); }
+});
+</script>
+</body>
+</html>

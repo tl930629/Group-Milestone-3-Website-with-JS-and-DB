@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in or create an account — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .auth { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; padding-block: 3rem; align-items: center; }
+    .auth-card { max-width: 440px; width: 100%; justify-self: end; }
+    .auth-side h1 { font-size: clamp(2.2rem, 4vw, 3rem); }
+    .auth-side ul { list-style: none; margin-top: 2rem; display: grid; gap: 1rem; }
+    .auth-side li { display: flex; gap: .8rem; align-items: start; }
+    .auth-side li span:first-child { font-size: 1.4rem; line-height: 1.2; }
+    .pw-wrap { position: relative; }
+    .pw-wrap .input { padding-right: 4rem; }
+    .pw-toggle { position: absolute; right: .5rem; top: 50%; transform: translateY(-50%); font-size: .82rem; font-weight: 600; color: var(--cobalt); padding: .3rem .5rem; }
+    .strength { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: .4rem; }
+    .strength span { height: 4px; border-radius: 2px; background: var(--line); transition: background .2s; }
+    .strength-label { font-size: .8rem; color: var(--ink-3); }
+    .divider { display: flex; align-items: center; gap: .75rem; color: var(--ink-3); font-size: .85rem; margin: 1.25rem 0; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+    .demo-hint { background: var(--cobalt-soft); border-radius: var(--r-sm); padding: .7rem .9rem; font-size: .88rem; margin-top: 1.25rem; }
+    @media (max-width: 860px) { .auth { grid-template-columns: 1fr; gap: 2rem; } .auth-card { justify-self: stretch; max-width: none; } .auth-side ul { display: none; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <div class="auth">
+    <div class="auth-side">
+      <h1>Your account keeps your cart, orders and reviews in one place.</h1>
+      <ul>
+        <li><span aria-hidden="true">🛒</span><div><strong>Your cart follows you</strong><p class="muted">Anything you added as a guest moves into your account when you log in.</p></div></li>
+        <li><span aria-hidden="true">📦</span><div><strong>Track every order</strong><p class="muted">See what you bought, when, and what it cost.</p></div></li>
+        <li><span aria-hidden="true">♡</span><div><strong>Save things for later</strong><p class="muted">Build a wishlist and come back to it on any device.</p></div></li>
+      </ul>
+    </div>
+
+    <div class="panel auth-card">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-login" aria-controls="panel-login" aria-selected="true">Log in</button>
+        <button class="tab" role="tab" id="tab-register" aria-controls="panel-register" aria-selected="false">Create account</button>
+      </div>
+
+      <div class="form-msg" id="msg" role="alert"></div>
+
+      <form class="tab-panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login" novalidate>
+        <div class="field"><label for="login-email">Email</label><input class="input" id="login-email" type="email" autocomplete="email" required><span class="field-error"></span></div>
+        <div class="field"><label for="login-password">Password</label>
+          <div class="pw-wrap"><input class="input" id="login-password" type="password" autocomplete="current-password" required><button type="button" class="pw-toggle" aria-label="Show password">Show</button></div>
+          <span class="field-error"></span></div>
+        <label class="check" style="margin-bottom:1.25rem"><input type="checkbox" id="remember" checked> Keep me logged in for 7 days</label>
+        <button class="btn btn-primary btn-block" type="submit">Log in</button>
+        <div class="demo-hint">Trying the demo? Log in with <strong>test@meridian.com</strong> and <strong>password123</strong>. <button type="button" class="link" id="fill-demo">Fill it in</button></div>
+      </form>
+
+      <form class="tab-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register" hidden novalidate>
+        <div class="field"><label for="reg-name">Full name</label><input class="input" id="reg-name" autocomplete="name" required><span class="field-error"></span></div>
+        <div class="field"><label for="reg-email">Email</label><input class="input" id="reg-email" type="email" autocomplete="email" required><span class="field-error"></span></div>
+        <div class="field"><label for="reg-password">Password</label>
+          <div class="pw-wrap"><input class="input" id="reg-password" type="password" autocomplete="new-password" required aria-describedby="pw-help"><button type="button" class="pw-toggle" aria-label="Show password">Show</button></div>
+          <div class="strength" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <span class="strength-label" id="pw-help">Use 8 or more characters with letters and numbers.</span>
+          <span class="field-error"></span></div>
+        <div class="field"><label for="reg-confirm">Confirm password</label><input class="input" id="reg-confirm" type="password" autocomplete="new-password" required><span class="field-error"></span></div>
+        <label class="check" style="margin-bottom:.4rem"><input type="checkbox" id="terms"> I agree to the store terms and privacy policy</label>
+        <span class="field-error" id="terms-error" style="display:block;margin-bottom:1rem"></span>
+        <button class="btn btn-primary btn-block" type="submit">Create account</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(() => {
+  const { $, $$, api, toast } = M;
+  const redirect = (() => { const r = M.params().get('redirect') || '/account/'; return r.startsWith('/') && !r.startsWith('//') ? r : '/account/'; })();
+
+  if (M.state.user) { location.replace(redirect); return; }
+
+  // ---- tabs ----
+  function showTab(name) {
+    ['login', 'register'].forEach(n => {
+      $('#tab-' + n).setAttribute('aria-selected', n === name);
+      $('#panel-' + n).hidden = n !== name;
+    });
+    $('#msg').className = 'form-msg';
+    history.replaceState(null, '', location.pathname + (name === 'register' ? '#register' : '') + location.search);
+  }
+  $('#tab-login').onclick = () => showTab('login');
+  $('#tab-register').onclick = () => showTab('register');
+  if (location.hash === '#register') showTab('register');
+
+  // ---- show/hide password ----
+  $$('.pw-toggle').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling, show = i.type === 'password';
+    i.type = show ? 'text' : 'password';
+    b.textContent = show ? 'Hide' : 'Show';
+    b.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+
+  // ---- strength meter ----
+  const COLORS = ['var(--danger)', '#e8890c', 'var(--marigold)', 'var(--ok)'];
+  const LABELS = ['Too weak', 'Weak', 'Good', 'Strong'];
+  $('#reg-password').addEventListener('input', e => {
+    const v = e.target.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+    if (/\d/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v) || v.length >= 12) score++;
+    $$('.strength span').forEach((s, i) => (s.style.background = v && i < score ? COLORS[score - 1] : ''));
+    $('#pw-help').textContent = v ? LABELS[Math.max(0, score - 1)] + '. Use 8 or more characters with letters and numbers.' : 'Use 8 or more characters with letters and numbers.';
+  });
+
+  // ---- validation ----
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function check(rules) {
+    let ok = true;
+    for (const [id, test, msg] of rules) {
+      const el = $('#' + id), err = el.closest('.field').querySelector('.field-error');
+      const bad = !test(el.value.trim());
+      el.classList.toggle('invalid', bad);
+      el.setAttribute('aria-invalid', bad);
+      err.textContent = bad ? msg : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    }
+    return ok;
+  }
+  function showMsg(text, type = 'error') { const m = $('#msg'); m.textContent = text; m.className = 'form-msg show ' + type; }
+
+  async function finish(user) {
+    await M.mergeGuestCart();
+    showMsg('Welcome, ' + user.full_name.split(' ')[0] + '. Taking you there now…', 'success');
+    setTimeout(() => location.replace(redirect), 500);
+  }
+
+  $('#panel-login').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!check([
+      ['login-email', v => EMAIL.test(v), 'Enter the email you signed up with.'],
+      ['login-password', v => v.length > 0, 'Enter your password.'],
+    ])) return;
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    try {
+      const r = await api('/api/auth/login', { method: 'POST', body: { email: $('#login-email').value, password: $('#login-password').value, remember: $('#remember').checked } });
+      await finish(r.user);
+    } catch (err) { showMsg(err.message); btn.disabled = false; }
+  });
+
+  $('#panel-register').addEventListener('submit', async e => {
+    e.preventDefault();
+    let ok = check([
+      ['reg-name', v => v.length >= 2, 'Enter your full name.'],
+      ['reg-email', v => EMAIL.test(v), 'Enter a valid email address, like name@example.com.'],
+      ['reg-password', v => v.length >= 8 && /\d/.test(v) && /[a-zA-Z]/.test(v), 'Password needs 8+ characters with letters and numbers.'],
+      ['reg-confirm', v => v === $('#reg-password').value.trim() && v.length > 0, 'Passwords don\'t match.'],
+    ]);
+    $('#terms-error').textContent = $('#terms').checked ? '' : 'Agree to the terms to create an account.';
+    if (!ok || !$('#terms').checked) return;
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    try {
+      const r = await api('/api/auth/register', { method: 'POST', body: { full_name: $('#reg-name').value, email: $('#reg-email').value, password: $('#reg-password').value } });
+      await finish(r.user);
+    } catch (err) { showMsg(err.message); btn.disabled = false; }
+  });
+
+  $('#fill-demo').onclick = () => { $('#login-email').value = 'test@meridian.com'; $('#login-password').value = 'password123'; };
+});
+</script>
+</body>
+</html>

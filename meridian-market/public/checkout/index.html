@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .stepper { display: flex; list-style: none; gap: 0; margin: 1.5rem 0 2rem; counter-reset: step; }
+    .stepper li { flex: 1; display: flex; align-items: center; gap: .6rem; font-weight: 600; color: var(--ink-3); font-size: .92rem; position: relative; }
+    .stepper li::before { counter-increment: step; content: counter(step); width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: .85rem; flex-shrink: 0; background: var(--paper); }
+    .stepper li:not(:last-child)::after { content: ''; flex: 1; height: 2px; background: var(--line); margin-right: .6rem; }
+    .stepper li.done { color: var(--ink-2); }
+    .stepper li.done::before { content: '✓'; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .stepper li.done::after { background: var(--ink); }
+    .stepper li.current { color: var(--ink); }
+    .stepper li.current::before { border-color: var(--cobalt); color: var(--cobalt); }
+    @media (max-width: 700px) { .stepper li span { display: none; } }
+
+    .checkout { display: grid; grid-template-columns: 1fr 360px; gap: 2.5rem; align-items: start; }
+    .summary { position: sticky; top: 100px; }
+    .summary .row { display: flex; justify-content: space-between; padding: .4rem 0; font-size: .95rem; }
+    .summary .total { border-top: 1px solid var(--line); margin-top: .5rem; padding-top: .9rem; font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; }
+    .summary .mini { display: flex; gap: .6rem; align-items: center; padding: .5rem 0; font-size: .9rem; }
+    .summary .mini .thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--tint); display: grid; place-items: center; font-size: 1.3rem; flex-shrink: 0; }
+    .summary .mini span:nth-child(2) { flex: 1; }
+    .promo { display: flex; gap: .5rem; margin-top: 1rem; }
+    .step-panel[hidden] { display: none; }
+    .step-actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .ship-opt { display: flex; align-items: center; gap: .9rem; border: 1.5px solid var(--line); border-radius: var(--r); padding: 1rem 1.1rem; margin-bottom: .6rem; cursor: pointer; background: var(--card); }
+    .ship-opt:has(input:checked) { border-color: var(--cobalt); box-shadow: 0 0 0 3px var(--cobalt-soft); }
+    .ship-opt input { accent-color: var(--cobalt); }
+    .ship-opt div { flex: 1; }
+    .review-block { padding: 1rem 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 1rem; }
+    .confirm { text-align: center; padding: 3rem 1rem; }
+    .confirm .check-circle { width: 72px; height: 72px; border-radius: 50%; background: var(--ok); color: #fff; display: grid; place-items: center; font-size: 2rem; margin: 0 auto 1.25rem; animation: pop .4s var(--ease); }
+    @keyframes pop { from { transform: scale(.5); opacity: 0; } }
+    .confirm p { margin: .75rem auto 0; }
+    @media (max-width: 900px) { .checkout { grid-template-columns: 1fr; } .summary { position: static; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <ol class="stepper" id="stepper" aria-label="Checkout progress">
+    <li><span>Cart</span></li><li><span>Shipping</span></li><li><span>Payment</span></li><li><span>Review</span></li><li><span>Confirmed</span></li>
+  </ol>
+
+  <div class="checkout" id="checkout">
+    <div>
+      <!-- 1. Cart -->
+      <section class="step-panel" data-step="1">
+        <h1 style="font-size:2rem">Your cart</h1>
+        <div id="cart-lines" class="mt-2"></div>
+        <div class="step-actions">
+          <a href="/products/" class="btn btn-ghost">Keep shopping</a>
+          <button class="btn btn-primary" id="to-shipping">Continue to shipping</button>
+        </div>
+        <p class="muted small mt-2" id="login-note" hidden>You'll log in or create an account before paying. Your cart comes with you.</p>
+      </section>
+
+      <!-- 2. Shipping -->
+      <section class="step-panel" data-step="2" hidden>
+        <h1 style="font-size:2rem">Where should we send it?</h1>
+        <form id="ship-form" class="mt-3" novalidate>
+          <div class="field"><label for="ship_name">Full name</label><input class="input" id="ship_name" autocomplete="name" required><span class="field-error"></span></div>
+          <div class="field"><label for="ship_address">Street address</label><input class="input" id="ship_address" autocomplete="street-address" required><span class="field-error"></span></div>
+          <div class="field-row">
+            <div class="field"><label for="ship_city">City</label><input class="input" id="ship_city" autocomplete="address-level2" required><span class="field-error"></span></div>
+            <div class="field"><label for="ship_zip">ZIP code</label><input class="input" id="ship_zip" autocomplete="postal-code" inputmode="numeric" required pattern="\d{5}(-\d{4})?"><span class="field-error"></span></div>
+          </div>
+          <h3 class="mt-3" style="margin-bottom:.75rem">Delivery speed</h3>
+          <label class="ship-opt"><input type="radio" name="shipping_method" value="standard" checked><div><strong>Standard</strong><div class="muted small">3–5 business days</div></div><span id="std-price">$5.99</span></label>
+          <label class="ship-opt"><input type="radio" name="shipping_method" value="express"><div><strong>Express</strong><div class="muted small">1–2 business days</div></div><span>$14.99</span></label>
+          <label class="ship-opt"><input type="radio" name="shipping_method" value="pickup"><div><strong>Pick up in San Francisco</strong><div class="muted small">Ready tomorrow at our Mission St. counter</div></div><span>Free</span></label>
+          <div class="step-actions">
+            <button type="button" class="btn btn-ghost" data-back>Back to cart</button>
+            <button type="submit" class="btn btn-primary">Continue to payment</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 3. Payment -->
+      <section class="step-panel" data-step="3" hidden>
+        <h1 style="font-size:2rem">Payment</h1>
+        <p class="muted mt-1">This is a demo store: use any test number such as 4242 4242 4242 4242. Only the last four digits are saved.</p>
+        <form id="pay-form" class="mt-3" novalidate>
+          <div class="field"><label for="card_name">Name on card</label><input class="input" id="card_name" autocomplete="cc-name" required><span class="field-error"></span></div>
+          <div class="field"><label for="card_number">Card number</label><input class="input" id="card_number" autocomplete="cc-number" inputmode="numeric" placeholder="1234 5678 9012 3456" required><span class="field-error"></span></div>
+          <div class="field-row">
+            <div class="field"><label for="card_exp">Expiry (MM/YY)</label><input class="input" id="card_exp" autocomplete="cc-exp" placeholder="08/28" required><span class="field-error"></span></div>
+            <div class="field"><label for="card_cvc">Security code</label><input class="input" id="card_cvc" autocomplete="cc-csc" inputmode="numeric" placeholder="123" required><span class="field-error"></span></div>
+          </div>
+          <div class="step-actions">
+            <button type="button" class="btn btn-ghost" data-back>Back to shipping</button>
+            <button type="submit" class="btn btn-primary">Review your order</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 4. Review -->
+      <section class="step-panel" data-step="4" hidden>
+        <h1 style="font-size:2rem">Check everything</h1>
+        <div id="review-blocks" class="mt-2"></div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-ghost" data-back>Back to payment</button>
+          <button class="btn btn-primary" id="place-order">Place order</button>
+        </div>
+      </section>
+
+      <!-- 5. Confirmed -->
+      <section class="step-panel confirm" data-step="5" hidden>
+        <div class="check-circle" aria-hidden="true">✓</div>
+        <h1 style="font-size:2.2rem">Order placed</h1>
+        <p class="lede" id="confirm-text"></p>
+        <div class="flex mt-4" style="justify-content:center;flex-wrap:wrap">
+          <a href="/account/" class="btn btn-primary">View your orders</a>
+          <a href="/products/" class="btn btn-ghost">Keep shopping</a>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel summary" id="summary" aria-label="Order summary">
+      <h3>Order summary</h3>
+      <div id="sum-items" class="mt-2"></div>
+      <form class="promo" id="promo-form">
+        <label class="sr-only" for="promo">Promo code</label>
+        <input class="input" id="promo" placeholder="Promo code" autocomplete="off">
+        <button class="btn btn-ghost" type="submit">Apply</button>
+      </form>
+      <div class="mt-2">
+        <div class="row"><span>Subtotal</span><span id="s-sub"></span></div>
+        <div class="row" id="s-disc-row" hidden><span>Discount</span><span id="s-disc"></span></div>
+        <div class="row"><span>Shipping</span><span id="s-ship"></span></div>
+        <div class="row"><span>Estimated tax</span><span id="s-tax"></span></div>
+        <div class="row total"><span>Total</span><span id="s-total"></span></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(() => {
+  const { $, $$, esc, money, api, toast } = M;
+  const TAX = 0.08625, SHIP = { standard: 5.99, express: 14.99, pickup: 0 };
+  const PROMOS = { MERIDIAN10: .10, WELCOME15: .15 };
+  const order = { step: 1, shipping: {}, method: 'standard', promo: '', card: {} };
+
+  function quote() {
+    const sub = M.state.cart.subtotal;
+    let ship = SHIP[order.method];
+    if (order.method === 'standard' && sub >= M.FREE_SHIP) ship = 0;
+    const disc = Math.round(sub * (PROMOS[order.promo] || 0) * 100) / 100;
+    const tax = Math.round((sub - disc) * TAX * 100) / 100;
+    return { sub, ship, disc, tax, total: Math.round((sub - disc + ship + tax) * 100) / 100 };
+  }
+
+  function renderSummary() {
+    const c = M.state.cart, q = quote();
+    $('#sum-items').innerHTML = c.items.map(i =>
+      '<div class="mini"><span class="thumb" style="--tint:' + esc(i.tint) + '" aria-hidden="true">' + esc(i.emoji) + '</span><span>' + esc(i.name) + ' <span class="muted">× ' + i.quantity + '</span></span><span>' + money(i.price * i.quantity) + '</span></div>').join('') || '<p class="muted small">No items yet.</p>';
+    $('#s-sub').textContent = money(q.sub);
+    $('#s-disc-row').hidden = !q.disc;
+    $('#s-disc').textContent = '−' + money(q.disc) + ' (' + order.promo + ')';
+    $('#s-ship').textContent = q.ship === 0 ? 'Free' : money(q.ship);
+    $('#s-tax').textContent = money(q.tax);
+    $('#s-total').textContent = money(q.total);
+    $('#std-price').textContent = M.state.cart.subtotal >= M.FREE_SHIP ? 'Free' : '$5.99';
+  }
+
+  function renderCartStep() {
+    const c = M.state.cart;
+    if (!c.items.length && order.step < 5) {
+      $('#cart-lines').innerHTML = '<div class="empty"><div class="big">🛍️</div><h3>Your cart is empty</h3><p>Add a few things from the shop, then come back here to check out.</p><a class="btn btn-primary" href="/products/">Go to the shop</a></div>';
+      $('#to-shipping').disabled = true;
+    } else {
+      $('#cart-lines').innerHTML = c.items.map(M.lineItemHtml).join('');
+      M.bindLineItems($('#cart-lines'));
+      $('#to-shipping').disabled = false;
+    }
+    $('#login-note').hidden = !!M.state.user;
+    $('#to-shipping').textContent = M.state.user ? 'Continue to shipping' : 'Log in to check out';
+  }
+
+  function go(step) {
+    order.step = step;
+    $$('.step-panel').forEach(p => (p.hidden = Number(p.dataset.step) !== step));
+    $$('#stepper li').forEach((li, i) => {
+      li.className = i + 1 < step ? 'done' : i + 1 === step ? 'current' : '';
+      li.toggleAttribute('aria-current', i + 1 === step);
+    });
+    $('#summary').hidden = step === 5;
+    $('#checkout').style.gridTemplateColumns = step === 5 ? '1fr' : '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---- validation helper ----
+  function validate(form, rules) {
+    let ok = true;
+    for (const [id, test, msg] of rules) {
+      const el = $('#' + id), err = el.parentElement.querySelector('.field-error');
+      const bad = !test(el.value.trim());
+      el.classList.toggle('invalid', bad);
+      el.setAttribute('aria-invalid', bad);
+      err.textContent = bad ? msg : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    }
+    return ok;
+  }
+  const luhn = n => { let s = 0, alt = false; for (let i = n.length - 1; i >= 0; i--) { let d = +n[i]; if (alt) { d *= 2; if (d > 9) d -= 9; } s += d; alt = !alt; } return s % 10 === 0; };
+
+  // ---- step 1 ----
+  $('#to-shipping').onclick = () => {
+    if (!M.state.user) { location.href = '/auth/?redirect=/checkout/'; return; }
+    go(2);
+  };
+
+  // ---- step 2 ----
+  $('#ship-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const ok = validate(e.target, [
+      ['ship_name', v => v.length >= 2, 'Enter the name of the person receiving the parcel.'],
+      ['ship_address', v => v.length >= 5, 'Enter a street address.'],
+      ['ship_city', v => v.length >= 2, 'Enter a city.'],
+      ['ship_zip', v => /^\d{5}(-\d{4})?$/.test(v), 'Enter a 5-digit ZIP code.'],
+    ]);
+    if (!ok) return;
+    ['ship_name', 'ship_address', 'ship_city', 'ship_zip'].forEach(k => (order.shipping[k] = $('#' + k).value.trim()));
+    go(3);
+  });
+  $$('input[name=shipping_method]').forEach(r => r.addEventListener('change', () => { order.method = r.value; renderSummary(); }));
+
+  // ---- step 3 ----
+  $('#card_number').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
+  });
+  $('#card_exp').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+  });
+  $('#pay-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const ok = validate(e.target, [
+      ['card_name', v => v.length >= 2, 'Enter the name shown on the card.'],
+      ['card_number', v => { const d = v.replace(/\D/g, ''); return d.length >= 12 && d.length <= 19 && luhn(d); }, 'That card number is not valid. Check the digits and try again.'],
+      ['card_exp', v => { const m = v.match(/^(\d{2})\/(\d{2})$/); if (!m || +m[1] < 1 || +m[1] > 12) return false; return new Date(2000 + +m[2], +m[1]) > new Date(); }, 'Enter a future expiry date as MM/YY.'],
+      ['card_cvc', v => /^\d{3,4}$/.test(v), 'Enter the 3 or 4 digits on the back of the card.'],
+    ]);
+    if (!ok) return;
+    order.card = { number: $('#card_number').value.replace(/\D/g, ''), name: $('#card_name').value.trim() };
+    renderReview();
+    go(4);
+  });
+
+  // ---- step 4 ----
+  function renderReview() {
+    const s = order.shipping, labels = { standard: 'Standard, 3–5 business days', express: 'Express, 1–2 business days', pickup: 'Pick up in San Francisco' };
+    $('#review-blocks').innerHTML =
+      '<div class="review-block"><div><h4>Ship to</h4><p class="muted">' + esc(s.ship_name) + '<br>' + esc(s.ship_address) + '<br>' + esc(s.ship_city) + ' ' + esc(s.ship_zip) + '</p></div><button class="link" data-goto="2">Edit</button></div>' +
+      '<div class="review-block"><div><h4>Delivery</h4><p class="muted">' + labels[order.method] + '</p></div><button class="link" data-goto="2">Edit</button></div>' +
+      '<div class="review-block"><div><h4>Payment</h4><p class="muted">Card ending in ' + order.card.number.slice(-4) + '</p></div><button class="link" data-goto="3">Edit</button></div>' +
+      '<div class="review-block"><div><h4>Items</h4><p class="muted">' + M.state.cart.items.map(i => esc(i.name) + ' × ' + i.quantity).join('<br>') + '</p></div><button class="link" data-goto="1">Edit</button></div>';
+  }
+  $('#review-blocks').addEventListener('click', e => { const b = e.target.closest('[data-goto]'); if (b) go(+b.dataset.goto); });
+
+  $('#place-order').onclick = async e => {
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.textContent = 'Placing order…';
+    try {
+      const r = await api('/api/orders', { method: 'POST', body: { ...order.shipping, shipping_method: order.method, promo: order.promo, card_number: order.card.number } });
+      $('#confirm-text').innerHTML = 'Order <strong>#' + r.orderId + '</strong> is confirmed. We charged ' + money(r.total) + ' to your card ending in ' + order.card.number.slice(-4) + ' and will email tracking details when it ships.';
+      await M.refreshCart();
+      go(5);
+    } catch (err) {
+      toast(err.message, 'error');
+      btn.disabled = false; btn.textContent = 'Place order';
+    }
+  };
+
+  $$('[data-back]').forEach(b => b.addEventListener('click', () => go(order.step - 1)));
+
+  // ---- promo ----
+  $('#promo-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const code = $('#promo').value.trim().toUpperCase();
+    if (!code) return;
+    if (PROMOS[code]) { order.promo = code; toast('Code ' + code + ' applied: ' + PROMOS[code] * 100 + '% off'); }
+    else toast('That code isn\'t valid. Try WELCOME15.', 'error');
+    renderSummary();
+  });
+
+  // prefill shipping from profile
+  if (M.state.user) {
+    api('/api/users/profile').then(({ user }) => {
+      $('#ship_name').value = user.full_name || '';
+      $('#ship_address').value = user.address || '';
+      $('#ship_city').value = user.city || '';
+      $('#ship_zip').value = user.zip || '';
+    }).catch(() => {});
+  }
+
+  document.addEventListener('cart:change', () => { renderCartStep(); renderSummary(); });
+  renderCartStep(); renderSummary(); go(1);
+});
+</script>
+</body>
+</html>

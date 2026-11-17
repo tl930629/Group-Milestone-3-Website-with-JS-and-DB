@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .sec-hero { padding-block: 3rem 2rem; max-width: 760px; }
+    .measures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+    .measure { display: grid; grid-template-columns: 48px 1fr; gap: 1rem; }
+    .measure .ico { width: 48px; height: 48px; border-radius: 12px; background: var(--cobalt-soft); display: grid; place-items: center; font-size: 1.4rem; }
+    .measure h3 { font-size: 1.1rem; margin-bottom: .35rem; }
+    .measure p { color: var(--ink-2); font-size: .95rem; }
+    .measure code { background: var(--paper-2); padding: .05rem .35rem; border-radius: 4px; font-size: .85em; }
+    .tips { list-style: none; display: grid; gap: .75rem; }
+    .tips li { display: flex; gap: .75rem; }
+    .tips li::before { content: '✓'; color: var(--ok); font-weight: 800; }
+    .report { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+    @media (max-width: 860px) { .measures, .report { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <section class="sec-hero">
+    <h1>How we keep your account and payments safe</h1>
+    <p class="lede mt-2">Here is exactly what the store does with your password, your session and your card details.</p>
+  </section>
+
+  <section class="measures">
+    <div class="panel measure"><span class="ico" aria-hidden="true">🔑</span><div><h3>Passwords are hashed</h3><p>We store a <code>bcrypt</code> hash with a unique salt, never the password itself. Not even the team can read it.</p></div></div>
+    <div class="panel measure"><span class="ico" aria-hidden="true">🍪</span><div><h3>Sessions stay on the server</h3><p>Your login lives in our database. The browser only keeps an <code>httpOnly</code> cookie that page scripts can't read, and it expires after 7 days.</p></div></div>
+    <div class="panel measure"><span class="ico" aria-hidden="true">💳</span><div><h3>No stored card numbers</h3><p>Card numbers are checked at checkout and then discarded. Only the last four digits are saved with your order.</p></div></div>
+    <div class="panel measure"><span class="ico" aria-hidden="true">🛡️</span><div><h3>Safe database queries</h3><p>Every query uses parameters, so text you type can't change the SQL. Account pages refuse requests from anyone who isn't logged in.</p></div></div>
+    <div class="panel measure"><span class="ico" aria-hidden="true">🔁</span><div><h3>Fresh session on login</h3><p>We issue a brand-new session ID each time you log in, which blocks session-fixation attacks.</p></div></div>
+    <div class="panel measure"><span class="ico" aria-hidden="true">🔒</span><div><h3>HTTPS in production</h3><p>When deployed, the site should run over TLS so passwords and cookies are encrypted in transit.</p></div></div>
+  </section>
+
+  <section class="section grid-2" style="gap:3rem">
+    <div><h2>Keep your account safe</h2><p class="muted mt-1">A few habits that protect you on any site.</p></div>
+    <ul class="tips">
+      <li>Use a password you don't use anywhere else, at least 8 characters with letters and numbers.</li>
+      <li>Log out when you shop on a shared or public computer.</li>
+      <li>We will never email you asking for your password or card number.</li>
+      <li>Change your password from Your account if you think someone else knows it.</li>
+    </ul>
+  </section>
+
+  <section class="panel report">
+    <div><h3>Found a security problem?</h3><p class="muted mt-1">Tell us what you found and how to reproduce it. We read every report.</p></div>
+    <form id="report-form" novalidate>
+      <label class="sr-only" for="report">Describe the issue</label>
+      <textarea class="textarea" id="report" rows="3" placeholder="Describe the issue"></textarea>
+      <button class="btn btn-ink mt-1" type="submit">Send report</button>
+    </form>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+<script>
+M.ready.then(() => {
+  M.$('#report-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (M.$('#report').value.trim().length < 10) { M.toast('Add a few more details so we can reproduce it', 'error'); return; }
+    e.target.reset();
+    M.toast('Report sent. Thank you for helping keep the store safe.');
+  });
+});
+</script>
+</body>
+</html>

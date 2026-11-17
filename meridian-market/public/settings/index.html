@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .settings { display: grid; grid-template-columns: 220px 1fr; gap: 3rem; align-items: start; }
+    .side-tabs { display: flex; flex-direction: column; gap: .25rem; position: sticky; top: 100px; }
+    .side-tabs .tab { text-align: left; border: 0; border-left: 2px solid transparent; margin: 0; border-radius: 0; }
+    .side-tabs .tab[aria-selected="true"] { border-left-color: var(--cobalt); background: var(--paper-2); }
+    .setting { display: flex; justify-content: space-between; align-items: center; gap: 2rem; padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+    .setting p { color: var(--ink-3); font-size: .9rem; }
+    .theme-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-top: 1rem; max-width: 520px; }
+    .theme-pick label { border: 1.5px solid var(--line); border-radius: var(--r); padding: .75rem; cursor: pointer; background: var(--card); text-align: center; font-weight: 600; font-size: .9rem; }
+    .theme-pick label:has(input:checked) { border-color: var(--cobalt); box-shadow: 0 0 0 3px var(--cobalt-soft); }
+    .theme-pick input { position: absolute; opacity: 0; }
+    .swatch { height: 56px; border-radius: 8px; margin-bottom: .5rem; border: 1px solid var(--line); }
+    .card-row { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); margin-bottom: .75rem; }
+    .card-row .brand { width: 52px; height: 34px; border-radius: 6px; background: var(--ink); color: var(--paper); display: grid; place-items: center; font-weight: 700; font-size: .75rem; }
+    .card-row div { flex: 1; }
+    @media (max-width: 860px) { .settings { grid-template-columns: 1fr; } .side-tabs { position: static; flex-direction: row; overflow-x: auto; } .side-tabs .tab { border-left: 0; border-bottom: 2px solid transparent; } .side-tabs .tab[aria-selected="true"] { border-bottom-color: var(--cobalt); } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <div class="page-head"><h1>Settings</h1><p>Choose how the store looks and what we send you. Preferences are saved in this browser.</p></div>
+
+  <div class="settings">
+    <div class="side-tabs" role="tablist" aria-orientation="vertical">
+      <button class="tab" role="tab" aria-selected="true" data-tab="appearance">Appearance</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="notifications">Notifications</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="privacy">Privacy</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="payment">Payment methods</button>
+    </div>
+
+    <div>
+      <section class="tab-panel" id="appearance" role="tabpanel">
+        <h2 style="font-size:1.5rem">Appearance</h2>
+        <fieldset style="border:0" class="mt-2">
+          <legend style="font-weight:600">Theme</legend>
+          <div class="theme-pick">
+            <label><input type="radio" name="theme" value="light"><div class="swatch" style="background:linear-gradient(135deg,#f1f3f6 60%,#2b4acb 60%)"></div>Light</label>
+            <label><input type="radio" name="theme" value="dark"><div class="swatch" style="background:linear-gradient(135deg,#0e1629 60%,#7b93ff 60%)"></div>Dark</label>
+            <label><input type="radio" name="theme" value="system"><div class="swatch" style="background:linear-gradient(90deg,#f1f3f6 50%,#0e1629 50%)"></div>Match device</label>
+          </div>
+        </fieldset>
+        <div class="setting mt-3"><div><strong>Larger text</strong><p>Increase the base text size across the store.</p></div><label class="switch"><input type="checkbox" data-pref="text"><span></span><span class="sr-only">Larger text</span></label></div>
+        <div class="setting"><div><strong>Reduce motion</strong><p>Turn off animations such as the cart drawer slide.</p></div><label class="switch"><input type="checkbox" data-pref="motion"><span></span><span class="sr-only">Reduce motion</span></label></div>
+      </section>
+
+      <section class="tab-panel" id="notifications" role="tabpanel" hidden>
+        <h2 style="font-size:1.5rem">Notifications</h2>
+        <div class="setting"><div><strong>Order updates</strong><p>Emails when your order ships and arrives.</p></div><label class="switch"><input type="checkbox" data-pref="n_orders" checked><span></span><span class="sr-only">Order updates</span></label></div>
+        <div class="setting"><div><strong>Monthly newsletter</strong><p>New arrivals and occasional discount codes.</p></div><label class="switch"><input type="checkbox" data-pref="n_news"><span></span><span class="sr-only">Monthly newsletter</span></label></div>
+        <div class="setting"><div><strong>Price drops on saved items</strong><p>We'll let you know when something on your wishlist goes on sale.</p></div><label class="switch"><input type="checkbox" data-pref="n_price" checked><span></span><span class="sr-only">Price drops</span></label></div>
+      </section>
+
+      <section class="tab-panel" id="privacy" role="tabpanel" hidden>
+        <h2 style="font-size:1.5rem">Privacy</h2>
+        <div class="setting"><div><strong>Remember recently viewed products</strong><p>Stored only in this browser.</p></div><label class="switch"><input type="checkbox" data-pref="p_recent" checked><span></span><span class="sr-only">Recently viewed</span></label></div>
+        <div class="setting"><div><strong>Personalised recommendations</strong><p>Use your orders to suggest related products.</p></div><label class="switch"><input type="checkbox" data-pref="p_recs"><span></span><span class="sr-only">Recommendations</span></label></div>
+        <div class="setting"><div><strong>Clear saved preferences</strong><p>Resets theme, text size and the switches on this page.</p></div><button class="btn btn-danger btn-sm" id="reset">Reset preferences</button></div>
+      </section>
+
+      <section class="tab-panel" id="payment" role="tabpanel" hidden>
+        <h2 style="font-size:1.5rem">Payment methods</h2>
+        <p class="muted mt-1" style="margin-bottom:1.25rem">For your security we don't save cards. You enter card details at checkout each time, and only the last four digits appear in your order history.</p>
+        <div class="card-row"><span class="brand">VISA</span><div><strong>Visa ending in 4242</strong><div class="muted small">Example card shown for the demo</div></div><span class="pill">Demo</span></div>
+        <a href="/security/" class="link">How we protect payment details</a>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(() => {
+  const { $, $$, toast } = M;
+  const KEY = 'meridian-prefs';
+  const prefs = JSON.parse(localStorage.getItem(KEY) || '{}');
+  const save = () => localStorage.setItem(KEY, JSON.stringify(prefs));
+
+  function applyTheme() {
+    const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    dark ? document.documentElement.dataset.theme = 'dark' : delete document.documentElement.dataset.theme;
+    prefs.text === 'large' ? document.documentElement.dataset.text = 'large' : delete document.documentElement.dataset.text;
+    let s = $('#motion-style');
+    if (prefs.motion && !s) { s = document.createElement('style'); s.id = 'motion-style'; s.textContent = '*{transition:none!important;animation:none!important}'; document.head.appendChild(s); }
+    if (!prefs.motion && s) s.remove();
+  }
+
+  // tabs
+  $$('[data-tab]').forEach(t => t.onclick = () => {
+    $$('[data-tab]').forEach(x => x.setAttribute('aria-selected', x === t));
+    $$('.tab-panel').forEach(p => (p.hidden = p.id !== t.dataset.tab));
+  });
+
+  // theme
+  $$('input[name=theme]').forEach(r => {
+    r.checked = r.value === (prefs.theme || 'light');
+    r.onchange = () => { prefs.theme = r.value; save(); applyTheme(); toast('Theme set to ' + r.parentElement.textContent.trim().toLowerCase()); };
+  });
+
+  // switches
+  $$('[data-pref]').forEach(sw => {
+    const k = sw.dataset.pref;
+    if (k === 'text') sw.checked = prefs.text === 'large';
+    else if (k in prefs) sw.checked = !!prefs[k];
+    sw.onchange = () => {
+      prefs[k] = k === 'text' ? (sw.checked ? 'large' : 'normal') : sw.checked;
+      save(); applyTheme();
+      toast('Preference saved');
+    };
+  });
+
+  $('#reset').onclick = () => { localStorage.removeItem(KEY); toast('Preferences reset'); setTimeout(() => location.reload(), 500); };
+  applyTheme();
+});
+</script>
+</body>
+</html>

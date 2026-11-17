@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help centre — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .faq { display: grid; grid-template-columns: 220px 1fr; gap: 3rem; align-items: start; }
+    .faq-nav { position: sticky; top: 100px; display: flex; flex-direction: column; gap: .25rem; }
+    .faq-nav a { padding: .5rem .75rem; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 500; }
+    .faq-nav a:hover { background: var(--paper-2); color: var(--ink); }
+    .faq-group { margin-bottom: 2.5rem; scroll-margin-top: 100px; }
+    .faq-group h2 { font-size: 1.5rem; margin-bottom: .5rem; }
+    .faq-search { max-width: 520px; margin-top: 1.25rem; }
+    @media (max-width: 860px) { .faq { grid-template-columns: 1fr; } .faq-nav { position: static; flex-direction: row; flex-wrap: wrap; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <div class="page-head">
+    <h1>Help centre</h1>
+    <p>Answers about orders, shipping, returns and your account.</p>
+    <div class="faq-search">
+      <label class="sr-only" for="faq-q">Search the help centre</label>
+      <input class="input" id="faq-q" type="search" placeholder="Search questions, e.g. “refund”">
+    </div>
+  </div>
+
+  <div class="faq">
+    <nav class="faq-nav" aria-label="Help topics">
+      <a href="#orders">Orders</a><a href="#shipping">Shipping & returns</a><a href="#payment">Payment</a><a href="#account">Your account</a>
+    </nav>
+
+    <div id="faq-body">
+      <section class="faq-group accordion" id="orders">
+        <h2>Orders</h2>
+        <details><summary>How do I place an order?</summary><div class="answer">Add items to your cart with the + button, open the cart and choose “Go to checkout”. You'll enter a shipping address, pick a delivery speed, add a card, and review everything before placing the order.</div></details>
+        <details><summary>Can I check out without an account?</summary><div class="answer">You can fill a cart as a guest, but you need an account to pay. When you log in or sign up, everything in your guest cart moves into your account automatically.</div></details>
+        <details><summary>Where can I see my past orders?</summary><div class="answer">Go to <a class="link" href="/account/">Your account</a> and open the Orders tab. Click any order to see its items, totals and shipping address.</div></details>
+        <details><summary>Can I change an order after placing it?</summary><div class="answer">Orders are confirmed right away, so we can't edit them. If something is wrong, place a new order and return the old one within 30 days.</div></details>
+      </section>
+
+      <section class="faq-group accordion" id="shipping">
+        <h2>Shipping & returns</h2>
+        <details><summary>How much is shipping?</summary><div class="answer">Standard shipping is $5.99, or free when your subtotal is $50 or more. Express costs $14.99. Pickup from our San Francisco counter is always free.</div></details>
+        <details><summary>How long does delivery take?</summary><div class="answer">Standard arrives in 3–5 business days and express in 1–2. Pickup orders are ready the next day.</div></details>
+        <details><summary>What is your return policy?</summary><div class="answer">You can return any unused item within 30 days for a full refund. Refunds go back to the original card within 5–7 business days of us receiving the item.</div></details>
+      </section>
+
+      <section class="faq-group accordion" id="payment">
+        <h2>Payment</h2>
+        <details><summary>Which cards do you accept?</summary><div class="answer">Visa, Mastercard, American Express and Discover. Because this is a student project, no real charge is made; use a test number like 4242 4242 4242 4242.</div></details>
+        <details><summary>Do you store my card number?</summary><div class="answer">No. We only keep the last four digits so you can recognise the card in your order history. <a class="link" href="/security/">Read more about security</a>.</div></details>
+        <details><summary>How do promo codes work?</summary><div class="answer">Enter the code in the order summary at checkout and press Apply. WELCOME15 gives 15% off and MERIDIAN10 gives 10% off. One code per order.</div></details>
+      </section>
+
+      <section class="faq-group accordion" id="account">
+        <h2>Your account</h2>
+        <details><summary>How do I reset my password?</summary><div class="answer">If you're logged in, go to Your account, then the Password tab. You'll need your current password to set a new one.</div></details>
+        <details><summary>How do I update my address?</summary><div class="answer">Open the Profile tab in Your account. The address you save there is filled in for you at checkout.</div></details>
+        <details><summary>How do I switch to dark mode?</summary><div class="answer">Go to <a class="link" href="/settings/">Settings</a> and choose a theme under Appearance. Your choice is saved in this browser.</div></details>
+      </section>
+
+      <div class="empty" id="faq-empty" hidden><h3>No questions match that search</h3><p>Try another word, or browse the topics on the left.</p></div>
+    </div>
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(() => {
+  const { $, $$ } = M;
+  $('#faq-q').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    let any = false;
+    $$('.faq-group').forEach(g => {
+      let groupHit = false;
+      g.querySelectorAll('details').forEach(d => {
+        const hit = !q || d.textContent.toLowerCase().includes(q);
+        d.hidden = !hit;
+        d.open = !!q && hit;
+        groupHit ||= hit;
+      });
+      g.hidden = !groupHit;
+      any ||= groupHit;
+    });
+    $('#faq-empty').hidden = any;
+  });
+  // open the targeted section's first question when arriving via #hash
+  const g = location.hash && document.querySelector(location.hash + ' details');
+  if (g) g.open = true;
+});
+</script>
+</body>
+</html>

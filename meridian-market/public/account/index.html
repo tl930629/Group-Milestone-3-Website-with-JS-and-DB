@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your account — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stats .panel strong { display: block; font-family: var(--font-display); font-size: 1.8rem; }
+    .order { border: 1px solid var(--line); border-radius: var(--r); background: var(--card); margin-bottom: .75rem; }
+    .order summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto auto auto; gap: 1.5rem; align-items: center; padding: 1rem 1.25rem; }
+    .order summary::-webkit-details-marker { display: none; }
+    .order .emojis { font-size: 1.3rem; letter-spacing: .1em; }
+    .order-body { padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--line); }
+    .order-body table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .93rem; }
+    .order-body td, .order-body th { padding: .5rem 0; text-align: left; border-bottom: 1px solid var(--line); }
+    .order-body th { color: var(--ink-3); font-weight: 600; font-size: .82rem; }
+    .order-body td:last-child, .order-body th:last-child { text-align: right; }
+    .profile-form { max-width: 560px; }
+    @media (max-width: 700px) { .stats { grid-template-columns: 1fr; } .order summary { grid-template-columns: 1fr auto; } .order summary .hide-sm { display: none; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <div class="page-head flex between wrap-flex">
+    <div><h1 id="hello">Your account</h1><p id="member-since"></p></div>
+    <button class="btn btn-ghost" id="logout">Log out</button>
+  </div>
+
+  <div class="stats">
+    <div class="panel panel-tight"><span class="muted small">Orders placed</span><strong id="st-orders">–</strong></div>
+    <div class="panel panel-tight"><span class="muted small">Total spent</span><strong id="st-spent">–</strong></div>
+    <div class="panel panel-tight"><span class="muted small">Saved items</span><strong id="st-wish">–</strong></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="orders">Orders</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="wishlist">Wishlist</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="profile">Profile</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="password">Password</button>
+  </div>
+
+  <section class="tab-panel" id="orders" role="tabpanel"><div id="order-list"></div></section>
+
+  <section class="tab-panel" id="wishlist" role="tabpanel" hidden><div class="product-grid" id="wish-grid"></div></section>
+
+  <section class="tab-panel" id="profile" role="tabpanel" hidden>
+    <form class="profile-form" id="profile-form" novalidate>
+      <div class="form-msg" id="profile-msg" role="alert"></div>
+      <div class="field"><label for="p-name">Full name</label><input class="input" id="p-name" autocomplete="name" required></div>
+      <div class="field"><label for="p-email">Email</label><input class="input" id="p-email" disabled><span class="muted small">Contact support to change your email.</span></div>
+      <div class="field"><label for="p-phone">Phone</label><input class="input" id="p-phone" type="tel" autocomplete="tel"></div>
+      <div class="field"><label for="p-address">Street address</label><input class="input" id="p-address" autocomplete="street-address"></div>
+      <div class="field-row">
+        <div class="field"><label for="p-city">City</label><input class="input" id="p-city" autocomplete="address-level2"></div>
+        <div class="field"><label for="p-zip">ZIP code</label><input class="input" id="p-zip" autocomplete="postal-code"></div>
+      </div>
+      <p class="muted small" style="margin-bottom:1rem">We use this address to fill in checkout for you.</p>
+      <button class="btn btn-primary" type="submit">Save profile</button>
+    </form>
+  </section>
+
+  <section class="tab-panel" id="password" role="tabpanel" hidden>
+    <form class="profile-form" id="pw-form" novalidate>
+      <div class="form-msg" id="pw-msg" role="alert"></div>
+      <div class="field"><label for="pw-current">Current password</label><input class="input" id="pw-current" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="pw-new">New password</label><input class="input" id="pw-new" type="password" autocomplete="new-password" required><span class="muted small">8 or more characters with letters and numbers.</span></div>
+      <div class="field"><label for="pw-confirm">Confirm new password</label><input class="input" id="pw-confirm" type="password" autocomplete="new-password" required></div>
+      <button class="btn btn-primary" type="submit">Change password</button>
+    </form>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(async () => {
+  const { $, $$, api, esc, money, fmtDate, toast, renderProducts } = M;
+  if (!M.state.user) { location.replace('/auth/?redirect=/account/'); return; }
+
+  // ---- tabs ----
+  function show(name) {
+    $$('[data-tab]').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name));
+    $$('.tab-panel').forEach(p => (p.hidden = p.id !== name));
+    history.replaceState(null, '', '#' + name);
+  }
+  $$('[data-tab]').forEach(t => (t.onclick = () => show(t.dataset.tab)));
+  if (['wishlist', 'profile', 'password'].includes(location.hash.slice(1))) show(location.hash.slice(1));
+
+  $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/'; };
+
+  // ---- profile + stats ----
+  async function loadProfile() {
+    const { user, stats } = await api('/api/users/profile');
+    $('#hello').textContent = 'Hi, ' + user.full_name.split(' ')[0];
+    $('#member-since').textContent = user.email + ', member since ' + fmtDate(user.created_at);
+    $('#st-orders').textContent = stats.orders;
+    $('#st-spent').textContent = money(stats.spent);
+    $('#p-name').value = user.full_name; $('#p-email').value = user.email;
+    $('#p-phone').value = user.phone || ''; $('#p-address').value = user.address || '';
+    $('#p-city').value = user.city || ''; $('#p-zip').value = user.zip || '';
+  }
+
+  // ---- orders ----
+  const SHIP_LABEL = { standard: 'Standard', express: 'Express', pickup: 'Pickup' };
+  async function loadOrders() {
+    const { orders } = await api('/api/orders');
+    if (!orders.length) {
+      $('#order-list').innerHTML = '<div class="empty"><div class="big">📦</div><h3>No orders yet</h3><p>When you check out, your orders show up here with their totals and status.</p><a class="btn btn-primary" href="/products/">Start shopping</a></div>';
+      return;
+    }
+    $('#order-list').innerHTML = orders.map(o =>
+      '<details class="order" data-id="' + o.id + '"><summary>' +
+        '<div><strong>Order #' + o.id + '</strong><div class="muted small">' + fmtDate(o.created_at) + ', ' + o.item_count + ' item' + (o.item_count === 1 ? '' : 's') + '</div></div>' +
+        '<span class="emojis hide-sm" aria-hidden="true">' + esc((o.emojis || '')) + '</span>' +
+        '<span class="pill ok hide-sm">' + esc(o.status[0].toUpperCase() + o.status.slice(1)) + '</span>' +
+        '<strong>' + money(o.total) + '</strong>' +
+      '</summary><div class="order-body"><p class="muted small mt-1">Loading…</p></div></details>').join('');
+    $$('#order-list details').forEach(d => d.addEventListener('toggle', async () => {
+      if (!d.open || d.dataset.loaded) return;
+      d.dataset.loaded = 1;
+      try {
+        const { order: o, items } = await api('/api/orders/' + d.dataset.id);
+        d.querySelector('.order-body').innerHTML =
+          '<table><thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead><tbody>' +
+          items.map(i => '<tr><td><a class="link" href="/products/detail.html?id=' + i.product_id + '">' + esc(i.emoji) + ' ' + esc(i.name) + '</a></td><td>' + i.quantity + '</td><td>' + money(i.unit_price * i.quantity) + '</td></tr>').join('') +
+          '<tr><td colspan="2">Subtotal</td><td>' + money(o.subtotal) + '</td></tr>' +
+          (o.discount ? '<tr><td colspan="2">Discount</td><td>−' + money(o.discount) + '</td></tr>' : '') +
+          '<tr><td colspan="2">Shipping (' + SHIP_LABEL[o.shipping_method] + ')</td><td>' + (o.shipping_cost ? money(o.shipping_cost) : 'Free') + '</td></tr>' +
+          '<tr><td colspan="2">Tax</td><td>' + money(o.tax) + '</td></tr>' +
+          '<tr><th colspan="2">Total</th><th>' + money(o.total) + '</th></tr></tbody></table>' +
+          '<p class="muted small mt-2">Shipped to ' + esc(o.ship_name) + ', ' + esc(o.ship_address) + ', ' + esc(o.ship_city) + ' ' + esc(o.ship_zip) + '. Paid with card ending in ' + esc(o.card_last4) + '.</p>';
+      } catch (e) { d.querySelector('.order-body').innerHTML = '<p class="muted">' + esc(e.message) + '</p>'; }
+    }));
+  }
+
+  // ---- wishlist ----
+  async function loadWishlist() {
+    const { products } = await api('/api/wishlist');
+    $('#st-wish').textContent = products.length;
+    renderProducts($('#wish-grid'), products,
+      '<div class="empty" style="grid-column:1/-1"><div class="big">♡</div><h3>Your wishlist is empty</h3><p>Tap the heart on any product to save it here.</p><a class="btn btn-primary" href="/products/">Browse products</a></div>');
+  }
+  // keep wishlist tab in sync when hearts are toggled
+  $('#wish-grid').addEventListener('click', e => { if (e.target.closest('.wish-btn')) setTimeout(loadWishlist, 300); });
+
+  try { await Promise.all([loadProfile(), loadOrders(), loadWishlist()]); }
+  catch (e) { toast(e.message, 'error'); }
+
+  // ---- forms ----
+  const msg = (el, text, type) => { el.textContent = text; el.className = 'form-msg show ' + type; };
+
+  $('#profile-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!$('#p-name').value.trim()) { msg($('#profile-msg'), 'Name can\'t be empty.', 'error'); return; }
+    try {
+      await api('/api/users/profile', { method: 'PATCH', body: {
+        full_name: $('#p-name').value, phone: $('#p-phone').value, address: $('#p-address').value,
+        city: $('#p-city').value, zip: $('#p-zip').value } });
+      msg($('#profile-msg'), 'Profile saved.', 'success');
+      loadProfile();
+    } catch (err) { msg($('#profile-msg'), err.message, 'error'); }
+  });
+
+  $('#pw-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const n = $('#pw-new').value;
+    if (n !== $('#pw-confirm').value) { msg($('#pw-msg'), 'The new passwords don\'t match.', 'error'); return; }
+    try {
+      await api('/api/users/change-password', { method: 'POST', body: { current_password: $('#pw-current').value, new_password: n } });
+      msg($('#pw-msg'), 'Password changed. Use the new one next time you log in.', 'success');
+      e.target.reset();
+    } catch (err) { msg($('#pw-msg'), err.message, 'error'); }
+  });
+});
+</script>
+</body>
+</html>

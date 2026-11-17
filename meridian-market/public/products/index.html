@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop all products — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .shop { display: grid; grid-template-columns: 240px 1fr; gap: 2.5rem; align-items: start; }
+    .filters { position: sticky; top: 100px; }
+    .filter-group { padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+    .filter-group h3 { font-size: 1rem; margin-bottom: .75rem; }
+    .filter-group .check { margin-bottom: .45rem; justify-content: space-between; }
+    .filter-group .check span:first-of-type { flex: 1; }
+    .price-row { display: flex; gap: .5rem; align-items: center; }
+    .price-row .input { padding: .5rem .6rem; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .toolbar .select { width: auto; padding: .5rem .75rem; }
+    .active-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+    .active-filters .chip { font-size: .8rem; padding: .3rem .7rem; }
+    .filter-toggle { display: none; }
+    @media (max-width: 860px) {
+      .shop { grid-template-columns: 1fr; }
+      .filters { position: static; display: none; }
+      .filters.open { display: block; }
+      .filter-toggle { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <ol class="breadcrumb"><li><a href="/">Home</a></li><li aria-current="page" id="crumb">All products</li></ol>
+  <div class="page-head">
+    <h1 id="page-title">All products</h1>
+    <p id="page-sub">Filter by aisle, price and rating, or sort to find what you need.</p>
+  </div>
+
+  <div class="shop">
+    <aside class="filters" id="filters" aria-label="Product filters">
+      <div class="filter-group">
+        <h3>Aisle</h3>
+        <div id="cat-filters"></div>
+      </div>
+      <div class="filter-group">
+        <h3>Price</h3>
+        <div class="price-row">
+          <label class="sr-only" for="min-price">Minimum price</label>
+          <input class="input" id="min-price" type="number" min="0" placeholder="$ min">
+          <span class="muted">to</span>
+          <label class="sr-only" for="max-price">Maximum price</label>
+          <input class="input" id="max-price" type="number" min="0" placeholder="$ max">
+        </div>
+      </div>
+      <div class="filter-group">
+        <h3>Customer rating</h3>
+        <label class="check"><input type="radio" name="rating" value="" checked> <span>Any rating</span></label>
+        <label class="check"><input type="radio" name="rating" value="4.5"> <span>4.5 and up</span></label>
+        <label class="check"><input type="radio" name="rating" value="4"> <span>4.0 and up</span></label>
+      </div>
+      <div class="filter-group">
+        <label class="check"><input type="checkbox" id="sale-only"> <span>On sale only</span></label>
+      </div>
+      <button class="btn btn-ghost btn-block" id="clear-filters">Clear all filters</button>
+    </aside>
+
+    <section aria-labelledby="page-title">
+      <div class="toolbar">
+        <button class="btn btn-ghost btn-sm filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filters">Filters</button>
+        <span class="muted" id="result-count" aria-live="polite"></span>
+        <label class="flex small" style="gap:.5rem">Sort by
+          <select class="select" id="sort">
+            <option value="featured">Most popular</option>
+            <option value="rating">Highest rated</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="newest">Newest</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </label>
+      </div>
+      <div class="active-filters" id="active-filters"></div>
+      <div class="product-grid" id="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))"></div>
+      <nav class="pagination" id="pagination" aria-label="Pages"></nav>
+    </section>
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(async () => {
+  const { api, $, $$, esc, renderProducts, skeletonCards } = M;
+  const LIMIT = 12;
+  const p = M.params();
+  const state = {
+    category: new Set((p.get('category') || '').split(',').filter(Boolean)),
+    minPrice: p.get('minPrice') || '',
+    maxPrice: p.get('maxPrice') || '',
+    minRating: p.get('minRating') || '',
+    sale: p.get('sale') === '1',
+    sort: p.get('sort') || 'featured',
+    page: parseInt(p.get('page')) || 1,
+  };
+  let categories = [];
+
+  // ---- category checkboxes ----
+  try { categories = (await api('/api/categories')).categories; } catch { /* filters still work */ }
+  $('#cat-filters').innerHTML = categories.map(c =>
+    '<label class="check"><input type="checkbox" value="' + esc(c.slug) + '"' + (state.category.has(c.slug) ? ' checked' : '') + '>' +
+    '<span>' + esc(c.name) + '</span><span class="muted small">' + c.product_count + '</span></label>').join('');
+
+  // reflect state into controls
+  $('#min-price').value = state.minPrice;
+  $('#max-price').value = state.maxPrice;
+  $('#sale-only').checked = state.sale;
+  $('#sort').value = state.sort;
+  $$('input[name=rating]').forEach(r => (r.checked = r.value === state.minRating));
+
+  function query() {
+    const q = new URLSearchParams();
+    if (state.category.size) q.set('category', [...state.category].join(','));
+    if (state.minPrice) q.set('minPrice', state.minPrice);
+    if (state.maxPrice) q.set('maxPrice', state.maxPrice);
+    if (state.minRating) q.set('minRating', state.minRating);
+    if (state.sale) q.set('sale', '1');
+    if (state.sort !== 'featured') q.set('sort', state.sort);
+    if (state.page > 1) q.set('page', state.page);
+    return q;
+  }
+
+  function renderHeading() {
+    const names = categories.filter(c => state.category.has(c.slug)).map(c => c.name);
+    const title = state.sale ? 'Deals' : names.length === 1 ? names[0] : 'All products';
+    $('#page-title').textContent = title;
+    $('#crumb').textContent = title;
+    document.title = title + ' — Meridian Market';
+
+    const chips = [];
+    names.forEach((n, i) => chips.push(['cat', categories.find(c => c.name === n).slug, n]));
+    if (state.minPrice || state.maxPrice) chips.push(['price', '', '$' + (state.minPrice || 0) + ' – ' + (state.maxPrice ? '$' + state.maxPrice : 'any')]);
+    if (state.minRating) chips.push(['rating', '', state.minRating + '★ and up']);
+    if (state.sale) chips.push(['sale', '', 'On sale']);
+    $('#active-filters').innerHTML = chips.map(([k, v, l]) =>
+      '<button class="chip" data-k="' + k + '" data-v="' + esc(v) + '" aria-label="Remove filter ' + esc(l) + '">' + esc(l) + ' ✕</button>').join('');
+  }
+
+  async function load() {
+    const q = query();
+    history.replaceState(null, '', '/products/' + (q.toString() ? '?' + q : ''));
+    renderHeading();
+    $('#grid').innerHTML = skeletonCards(6);
+    q.set('limit', LIMIT);
+    q.set('page', state.page);
+    try {
+      const data = await api('/api/products?' + q);
+      $('#result-count').textContent = data.total + (data.total === 1 ? ' product' : ' products');
+      renderProducts($('#grid'), data.products);
+      renderPagination(data.page, data.pages);
+    } catch (e) {
+      $('#grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>Products could not load</h3><p>' + esc(e.message) + '</p></div>';
+    }
+  }
+
+  function renderPagination(page, pages) {
+    const nav = $('#pagination');
+    if (pages <= 1) { nav.innerHTML = ''; return; }
+    let html = '<button data-page="' + (page - 1) + '"' + (page === 1 ? ' disabled' : '') + ' aria-label="Previous page">‹</button>';
+    for (let i = 1; i <= pages; i++) html += '<button data-page="' + i + '"' + (i === page ? ' aria-current="page"' : '') + '>' + i + '</button>';
+    html += '<button data-page="' + (page + 1) + '"' + (page === pages ? ' disabled' : '') + ' aria-label="Next page">›</button>';
+    nav.innerHTML = html;
+  }
+
+  // ---- events ----
+  const reload = () => { state.page = 1; load(); };
+  $('#cat-filters').addEventListener('change', e => {
+    e.target.checked ? state.category.add(e.target.value) : state.category.delete(e.target.value);
+    reload();
+  });
+  let t;
+  ['#min-price', '#max-price'].forEach(s => $(s).addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => { state.minPrice = $('#min-price').value; state.maxPrice = $('#max-price').value; reload(); }, 400);
+  }));
+  $$('input[name=rating]').forEach(r => r.addEventListener('change', () => { state.minRating = r.value; reload(); }));
+  $('#sale-only').addEventListener('change', e => { state.sale = e.target.checked; reload(); });
+  $('#sort').addEventListener('change', e => { state.sort = e.target.value; reload(); });
+  $('#pagination').addEventListener('click', e => {
+    const b = e.target.closest('[data-page]');
+    if (!b) return;
+    state.page = parseInt(b.dataset.page);
+    load();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('#active-filters').addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    const k = c.dataset.k;
+    if (k === 'cat') { state.category.delete(c.dataset.v); $('#cat-filters input[value="' + c.dataset.v + '"]').checked = false; }
+    if (k === 'price') { state.minPrice = state.maxPrice = ''; $('#min-price').value = $('#max-price').value = ''; }
+    if (k === 'rating') { state.minRating = ''; $$('input[name=rating]')[0].checked = true; }
+    if (k === 'sale') { state.sale = false; $('#sale-only').checked = false; }
+    reload();
+  });
+  $('#clear-filters').addEventListener('click', () => {
+    state.category.clear(); state.minPrice = state.maxPrice = state.minRating = ''; state.sale = false;
+    $$('#filters input[type=checkbox]').forEach(i => (i.checked = false));
+    $('#min-price').value = $('#max-price').value = '';
+    $$('input[name=rating]')[0].checked = true;
+    reload();
+  });
+  $('#filter-toggle').addEventListener('click', e => {
+    const open = $('#filters').classList.toggle('open');
+    e.currentTarget.setAttribute('aria-expanded', open);
+  });
+
+  load();
+});
+</script>
+</body>
+</html>

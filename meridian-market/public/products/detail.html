@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product — Meridian Market</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .detail { display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; padding-block: 1.5rem 3rem; align-items: start; }
+    .detail .product-tile { font-size: 9rem; border-radius: var(--r-lg); }
+    .detail h1 { font-size: clamp(2rem, 4vw, 2.8rem); margin: .4rem 0 .75rem; }
+    .detail .price { font-size: 1.9rem; }
+    .detail .price del { font-size: 1rem; }
+    .save-note { color: var(--ok); font-weight: 600; font-size: .9rem; margin-left: .5rem; }
+    .buy-row { display: flex; gap: .75rem; margin-top: 1.75rem; flex-wrap: wrap; }
+    .buy-row .qty { margin: 0; }
+    .buy-row .qty button { width: 42px; height: 46px; }
+    .buy-row .qty input { width: 48px; height: 46px; }
+    .buy-row .btn { height: 50px; padding-inline: 1.6rem; }
+    .stock { margin-top: 1rem; font-size: .9rem; }
+    .stock.low { color: var(--danger); font-weight: 600; }
+    .facts { list-style: none; margin-top: 2rem; border-top: 1px solid var(--line); }
+    .facts li { display: flex; justify-content: space-between; padding: .75rem 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
+    .facts li span:first-child { color: var(--ink-3); }
+
+    .reviews { display: grid; grid-template-columns: 300px 1fr; gap: 3rem; }
+    .rating-big { font-family: var(--font-display); font-size: 3.5rem; font-weight: 800; line-height: 1; }
+    .review { padding: 1.25rem 0; border-bottom: 1px solid var(--line); }
+    .review-head { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .35rem; }
+    .star-input { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: .15rem; }
+    .star-input input { position: absolute; opacity: 0; }
+    .star-input label { font-size: 1.8rem; color: var(--line); cursor: pointer; line-height: 1; }
+    .star-input input:checked ~ label, .star-input label:hover, .star-input label:hover ~ label { color: var(--marigold); }
+    .star-input input:focus-visible + label { outline: 3px solid var(--cobalt); border-radius: 4px; }
+    @media (max-width: 860px) { .detail, .reviews { grid-template-columns: 1fr; gap: 1.5rem; } }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main" class="wrap">
+  <ol class="breadcrumb" id="crumbs"><li><a href="/">Home</a></li><li><a href="/products/">Shop</a></li></ol>
+
+  <div id="detail-root"><div class="detail"><div class="product-tile skeleton"></div><div><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line" style="width:80%;height:2rem"></div></div></div></div>
+
+  <section class="section" id="reviews-section" hidden>
+    <h2 style="margin-bottom:1.5rem">Customer reviews</h2>
+    <div class="reviews">
+      <div>
+        <div class="rating-big" id="rating-big"></div>
+        <div id="rating-stars" class="mt-1"></div>
+        <p class="muted small mt-1" id="rating-count"></p>
+        <form class="panel mt-3" id="review-form" novalidate>
+          <h3 style="font-size:1.05rem">Write a review</h3>
+          <fieldset class="field mt-2" style="border:0">
+            <legend class="small" style="font-weight:600;margin-bottom:.35rem">Your rating</legend>
+            <div class="star-input">
+              <input type="radio" id="s5" name="rating" value="5"><label for="s5" title="5 stars">★</label>
+              <input type="radio" id="s4" name="rating" value="4"><label for="s4" title="4 stars">★</label>
+              <input type="radio" id="s3" name="rating" value="3"><label for="s3" title="3 stars">★</label>
+              <input type="radio" id="s2" name="rating" value="2"><label for="s2" title="2 stars">★</label>
+              <input type="radio" id="s1" name="rating" value="1"><label for="s1" title="1 star">★</label>
+            </div>
+          </fieldset>
+          <div class="field">
+            <label for="review-comment">Your review</label>
+            <textarea class="textarea" id="review-comment" rows="4" maxlength="1000" placeholder="What did you like or dislike?"></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Post review</button>
+          <p class="muted small mt-1" id="review-login" hidden>You need to <a class="link" href="/auth/">log in</a> to post a review.</p>
+        </form>
+      </div>
+      <div id="review-list"></div>
+    </div>
+  </section>
+
+  <section class="section" id="related-section" hidden>
+    <div class="section-head"><h2>More from this aisle</h2><a class="link" id="related-link" href="/products/">See the whole aisle</a></div>
+    <div class="product-grid" id="related-grid"></div>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(async () => {
+  const { api, $, esc, money, stars, fmtDate, renderProducts, priceHtml, badgeHtml, toast } = M;
+  const id = parseInt(M.params().get('id'));
+  const root = $('#detail-root');
+
+  if (!id) {
+    root.innerHTML = '<div class="empty"><div class="big">🔎</div><h3>No product selected</h3><p>Pick something from the shop to see its details.</p><a class="btn btn-primary" href="/products/">Go to the shop</a></div>';
+    return;
+  }
+
+  let data;
+  try { data = await api('/api/products/' + id); }
+  catch (e) {
+    root.innerHTML = '<div class="empty"><div class="big">🔎</div><h3>We couldn\'t find that product</h3><p>It may have been removed. Try browsing the shop instead.</p><a class="btn btn-primary" href="/products/">Go to the shop</a></div>';
+    return;
+  }
+
+  const p = data.product;
+  document.title = p.name + ' — Meridian Market';
+  $('#crumbs').insertAdjacentHTML('beforeend',
+    '<li><a href="/products/?category=' + esc(p.category_slug) + '">' + esc(p.category) + '</a></li><li aria-current="page">' + esc(p.name) + '</li>');
+
+  const saved = M.state.wishlist.has(p.id);
+  const saving = p.original_price ? Math.round((1 - p.price / p.original_price) * 100) : 0;
+  const stockText = p.stock === 0 ? 'Out of stock' : p.stock <= 20 ? 'Only ' + p.stock + ' left in stock' : 'In stock, ships in 1 business day';
+
+  root.innerHTML =
+    '<div class="detail">' +
+      '<div class="product-tile" style="--tint:' + esc(p.tint) + '">' + badgeHtml(p) + '<span aria-hidden="true">' + esc(p.emoji) + '</span></div>' +
+      '<div>' +
+        '<a class="product-cat link" href="/products/?category=' + esc(p.category_slug) + '">' + esc(p.category) + '</a>' +
+        '<h1>' + esc(p.name) + '</h1>' +
+        '<div class="product-meta">' + stars(p.avg_rating) + '<a href="#reviews-section" class="link small">' + p.avg_rating.toFixed(1) + ' from ' + p.review_count + ' reviews</a></div>' +
+        '<div class="mt-3">' + priceHtml(p) + (saving ? '<span class="save-note">You save ' + saving + '%</span>' : '') + '</div>' +
+        '<p class="lede mt-2">' + esc(p.description) + '</p>' +
+        '<div class="buy-row">' +
+          '<div class="qty"><button id="q-dec" aria-label="Decrease quantity">−</button><input id="q-val" type="number" min="1" max="' + p.stock + '" value="1" aria-label="Quantity"><button id="q-inc" aria-label="Increase quantity">+</button></div>' +
+          '<button class="btn btn-primary" id="add-btn"' + (p.stock === 0 ? ' disabled' : '') + '>Add to cart</button>' +
+          '<button class="btn btn-ghost" id="wish-btn" aria-pressed="' + saved + '">' + (saved ? 'Saved to wishlist' : 'Save to wishlist') + '</button>' +
+        '</div>' +
+        '<p class="stock' + (p.stock > 0 && p.stock <= 20 ? ' low' : '') + '">' + stockText + '</p>' +
+        '<ul class="facts">' +
+          '<li><span>Shipping</span><span>' + (p.price >= M.FREE_SHIP ? 'Free standard shipping' : 'Free over $' + M.FREE_SHIP) + '</span></li>' +
+          '<li><span>Returns</span><span>30 days, unused</span></li>' +
+          '<li><span>Item number</span><span>MM-' + String(p.id).padStart(4, '0') + '</span></li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>';
+
+  const qv = $('#q-val');
+  const clamp = v => Math.max(1, Math.min(p.stock || 1, parseInt(v) || 1));
+  $('#q-dec').onclick = () => (qv.value = clamp(+qv.value - 1));
+  $('#q-inc').onclick = () => (qv.value = clamp(+qv.value + 1));
+  qv.onchange = () => (qv.value = clamp(qv.value));
+  $('#add-btn').onclick = () => M.addToCart(p, clamp(qv.value));
+  $('#wish-btn').onclick = async e => {
+    await M.toggleWish(p.id);
+    const s = M.state.wishlist.has(p.id);
+    e.target.textContent = s ? 'Saved to wishlist' : 'Save to wishlist';
+    e.target.setAttribute('aria-pressed', s);
+  };
+
+  // ---- reviews ----
+  function renderReviews(prod, reviews) {
+    $('#reviews-section').hidden = false;
+    $('#rating-big').textContent = prod.avg_rating.toFixed(1);
+    $('#rating-stars').innerHTML = stars(prod.avg_rating);
+    $('#rating-count').textContent = 'Based on ' + prod.review_count + ' ratings';
+    $('#review-list').innerHTML = reviews.length
+      ? reviews.map(r =>
+          '<article class="review"><div class="review-head"><strong>' + esc(r.full_name) + '</strong><span class="muted small">' + fmtDate(r.created_at) + '</span></div>' +
+          stars(r.rating) + (r.comment ? '<p class="mt-1">' + esc(r.comment) + '</p>' : '') + '</article>').join('')
+      : '<div class="empty"><h3>No written reviews yet</h3><p>Bought this? Your review helps other shoppers decide.</p></div>';
+  }
+  renderReviews(p, data.reviews);
+
+  const form = $('#review-form');
+  if (!M.state.user) {
+    form.querySelector('button[type=submit]').disabled = true;
+    $('#review-login').hidden = false;
+    $('#review-login a').href = '/auth/?redirect=' + encodeURIComponent(location.pathname + location.search);
+  } else {
+    const mine = data.reviews.find(r => r.user_id === M.state.user.id);
+    if (mine) {
+      form.querySelector('#s' + mine.rating).checked = true;
+      $('#review-comment').value = mine.comment || '';
+      form.querySelector('button[type=submit]').textContent = 'Update review';
+    }
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const rating = form.querySelector('input[name=rating]:checked');
+    if (!rating) { toast('Choose a star rating first', 'error'); return; }
+    try {
+      const r = await api('/api/products/' + p.id + '/reviews', { method: 'POST', body: { rating: rating.value, comment: $('#review-comment').value } });
+      toast(r.updated ? 'Review updated' : 'Review posted');
+      const fresh = await api('/api/products/' + p.id);
+      renderReviews(fresh.product, fresh.reviews);
+      form.querySelector('button[type=submit]').textContent = 'Update review';
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  // ---- related ----
+  if (data.related.length) {
+    $('#related-section').hidden = false;
+    $('#related-link').href = '/products/?category=' + p.category_slug;
+    renderProducts($('#related-grid'), data.related);
+  }
+});
+</script>
+</body>
+</html>

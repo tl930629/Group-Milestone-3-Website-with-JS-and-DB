@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meridian Market — everyday goods, chosen with care</title>
+  <meta name="description" content="Meridian Market sells everyday goods across eight aisles: electronics, fashion, home, kitchen, books, outdoors, beauty and toys.">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <style>
+    .hero { padding-block: 3.5rem 3rem; display: grid; grid-template-columns: 1.05fr 1fr; gap: 3rem; align-items: center; }
+    .hero h1 { font-size: clamp(2.6rem, 5.6vw, 4.4rem); font-variation-settings: 'opsz' 96; }
+    .hero .lede { margin-top: 1.25rem; }
+    .hero-actions { display: flex; gap: .75rem; margin-top: 2rem; flex-wrap: wrap; }
+    .hero-note { margin-top: 1.5rem; font-size: .9rem; color: var(--ink-3); }
+
+    /* The store directory board — the one bold element on the page */
+    .directory { background: var(--ink); color: #eef1f8; border-radius: var(--r-lg); padding: 1.75rem 1.75rem 1.25rem; box-shadow: var(--shadow-lg); position: relative; }
+    [data-theme="dark"] .directory { background: #0a1020; border: 1px solid var(--line); }
+    .directory-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 1rem; border-bottom: 2px solid rgba(255,255,255,.14); margin-bottom: .5rem; }
+    .directory-head h2 { font-size: 1.4rem; color: #fff; }
+    .directory-head span { font-size: .85rem; color: #8b96b0; }
+    .aisle { display: grid; grid-template-columns: 2.6rem auto 1fr auto; align-items: baseline; gap: .75rem; padding: .62rem .25rem; border-radius: 6px; transition: background .15s; }
+    .aisle:hover, .aisle:focus-visible { background: rgba(255,255,255,.07); }
+    .aisle-no { font-family: var(--font-display); font-weight: 800; color: var(--marigold); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .aisle-name { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; display: flex; gap: .5rem; align-items: center; }
+    .aisle-leader { border-bottom: 2px dotted rgba(255,255,255,.22); transform: translateY(-4px); }
+    .aisle-count { font-size: .85rem; color: #aab4cc; font-variant-numeric: tabular-nums; }
+    .aisle .arrow { display: inline-block; transition: transform .2s; opacity: 0; }
+    .aisle:hover .arrow { opacity: 1; transform: translateX(3px); }
+    .directory.loading .aisle { opacity: .4; }
+
+    .promises { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; padding-block: 2.5rem; border-block: 1px solid var(--line); }
+    .promises h3 { font-size: 1.1rem; margin-bottom: .4rem; }
+    .promises p { color: var(--ink-2); font-size: .95rem; }
+
+    .deal-band { background: var(--marigold-soft); border-radius: var(--r-lg); padding: 2.5rem; }
+    .deal-band .section-head h2 { color: var(--ink); }
+
+    .newsletter { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+    .newsletter form { display: flex; gap: .5rem; }
+    .newsletter .input { flex: 1; }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 2rem; }
+      .promises, .newsletter { grid-template-columns: 1fr; gap: 1.5rem; }
+      .deal-band { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main id="main">
+  <section class="wrap hero">
+    <div>
+      <h1>Everything for the week ahead, in eight aisles.</h1>
+      <p class="lede">Meridian is a small online store for useful things: headphones that last, pans you'll keep for decades, and a few nice surprises. Pick an aisle and start browsing.</p>
+      <div class="hero-actions">
+        <a href="/products/" class="btn btn-primary">Browse all products</a>
+        <a href="/products/?sale=1" class="btn btn-ghost">See this week's deals</a>
+      </div>
+      <p class="hero-note">Free standard shipping over $50 and 30-day returns on everything.</p>
+    </div>
+
+    <nav class="directory loading" aria-labelledby="dir-title">
+      <div class="directory-head"><h2 id="dir-title">Store directory</h2><span id="dir-total">Loading aisles</span></div>
+      <div id="directory-list">
+        <div class="aisle"><span class="aisle-no">1</span><span class="aisle-name">Loading</span><span class="aisle-leader"></span><span class="aisle-count"></span></div>
+      </div>
+    </nav>
+  </section>
+
+  <section class="wrap section">
+    <div class="section-head">
+      <div><h2>Most loved right now</h2><p>The products our customers review the most.</p></div>
+      <a href="/products/?sort=rating" class="link">Shop top rated</a>
+    </div>
+    <div class="product-grid" id="featured-grid"></div>
+  </section>
+
+  <section class="wrap">
+    <div class="promises">
+      <div><h3>Free shipping over $50</h3><p>Standard delivery takes 3–5 business days. Express arrives in 1–2.</p></div>
+      <div><h3>Returns within 30 days</h3><p>Changed your mind? Send it back unused for a full refund, no questions.</p></div>
+      <div><h3>Checkout you can trust</h3><p>Passwords are hashed with bcrypt and we never store your full card number. <a class="link" href="/security/">How we protect you</a></p></div>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="deal-band">
+      <div class="section-head">
+        <div><h2>This week's deals</h2><p class="muted">Marked down while stock lasts.</p></div>
+        <a href="/products/?sale=1" class="link">All deals</a>
+      </div>
+      <div class="product-grid" id="deals-grid"></div>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="newsletter panel">
+      <div><h2>Get one email a month</h2><p class="muted mt-1">New arrivals and the occasional discount code. Unsubscribe any time.</p></div>
+      <form id="newsletter-form" novalidate>
+        <label class="sr-only" for="nl-email">Email address</label>
+        <input class="input" id="nl-email" type="email" placeholder="you@example.com" required>
+        <button class="btn btn-ink" type="submit">Subscribe</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script>
+M.ready.then(async () => {
+  const { api, renderProducts, skeletonCards, esc, $ } = M;
+  $('#featured-grid').innerHTML = skeletonCards(8);
+  $('#deals-grid').innerHTML = skeletonCards(4);
+
+  try {
+    const [{ categories }, featured, deals] = await Promise.all([
+      api('/api/categories'), api('/api/products/featured'), api('/api/products/deals'),
+    ]);
+    const total = categories.reduce((s, c) => s + c.product_count, 0);
+    $('#dir-total').textContent = total + ' products';
+    $('#directory-list').innerHTML = categories.map((c, i) =>
+      '<a class="aisle" href="/products/?category=' + esc(c.slug) + '">' +
+        '<span class="aisle-no">' + (i + 1) + '</span>' +
+        '<span class="aisle-name"><span aria-hidden="true">' + esc(c.emoji) + '</span>' + esc(c.name) + '</span>' +
+        '<span class="aisle-leader" aria-hidden="true"></span>' +
+        '<span class="aisle-count">' + c.product_count + ' items <span class="arrow" aria-hidden="true">›</span></span>' +
+      '</a>').join('');
+    $('.directory').classList.remove('loading');
+    renderProducts($('#featured-grid'), featured.products);
+    renderProducts($('#deals-grid'), deals.products.slice(0, 4));
+  } catch (e) {
+    $('#featured-grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>Products could not load</h3><p>Check that the server and database are running, then refresh.</p></div>';
+  }
+
+  $('#newsletter-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('#nl-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { M.toast('Enter a valid email address to subscribe', 'error'); return; }
+    e.target.reset();
+    M.toast('Subscribed. Look for our next email at the start of the month.');
+  });
+});
+</script>
+</body>
+</html>
