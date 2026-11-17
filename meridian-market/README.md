@@ -2,7 +2,7 @@
 
 **Team:** [Your Team Name]
 
-**Members:** [Member 1] ([@github-username]) · [Member 2] ([@github-username]) · [Member 3] ([@github-username])
+**Members:** tl930629
 
 Meridian Market is a full-stack e-commerce site built with **Node.js + Express + PostgreSQL**.
 Shoppers can browse 24 products in 8 categories, filter and search, keep a cart (as a guest or
